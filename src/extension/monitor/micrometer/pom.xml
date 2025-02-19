@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.geoserver.extension</groupId>
+    <artifactId>gs-monitor</artifactId>
+    <version>2.27-SNAPSHOT</version>
+  </parent>
+  <artifactId>gs-monitor-micrometer</artifactId>
+  <packaging>jar</packaging>
+  <name>Micrometer Monitor Extension</name>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>io.micrometer</groupId>
+        <artifactId>micrometer-bom</artifactId>
+        <version>1.14.4</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.geoserver.extension</groupId>
+      <artifactId>gs-monitor-core</artifactId>
+      <version>2.27-SNAPSHOT</version>
+      <scope>compile</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-prometheus</artifactId>
+    </dependency>
+
+    <!--    <dependency>-->
+    <!--      <groupId>io.micrometer</groupId>-->
+    <!--      <artifactId>micrometer-registry-prometheus-simpleclient</artifactId>-->
+    <!--    </dependency>-->
+    <!--    <dependency>-->
+    <!--      <groupId>io.prometheus</groupId>-->
+    <!--      <artifactId>prometheus-metrics-core</artifactId>-->
+    <!--      <version>1.3.5</version>-->
+    <!--    </dependency>-->
+    <!--    <dependency>-->
+    <!--      <groupId>io.prometheus</groupId>-->
+    <!--      <artifactId>simpleclient</artifactId>-->
+    <!--      <version>0.16.0</version>-->
+    <!--    </dependency>-->
+    <!--    <dependency>-->
+    <!--      <groupId>io.prometheus</groupId>-->
+    <!--      <artifactId>simpleclient_httpserver</artifactId>-->
+    <!--      <version>0.16.0</version>-->
+    <!--    </dependency>-->
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>test-jar</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
