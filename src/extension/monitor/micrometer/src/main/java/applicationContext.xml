@@ -11,7 +11,7 @@
     <!-- rest bindings -->
     <context:component-scan base-package="org.geoserver.monitor.rest"/>
 
-    <bean id="micrometerAudit" class="org.geoserver.monitor.micrometer.MicrometerAudit">
+    <bean id="micrometerAudit" class="org.geoserver.monitor.micrometer.MicrometerMetricRequestListener">
         <constructor-arg ref="monitorConfig" index="0"/>
         <constructor-arg ref="prometheusMeterRegistry" index="1"/>
     </bean>

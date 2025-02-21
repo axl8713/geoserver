@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.geoserver.monitor.MonitorConfig;
@@ -17,25 +18,41 @@ import org.geoserver.monitor.RequestData;
 import org.geoserver.monitor.RequestDataListener;
 import org.geotools.util.logging.Logging;
 
-public class MicrometerAudit implements RequestDataListener {
+public class MicrometerMetricRequestListener implements RequestDataListener {
 
-    private static final Logger LOGGER = Logging.getLogger(MicrometerAudit.class);
-    private static final String PROMETHEUS = "prometheus";
+    private static final Logger LOGGER = Logging.getLogger(MicrometerMetricRequestListener.class);
+    private static final String MICROMETER = "micrometer";
 
-    PrometheusMeterRegistry registry;
     MonitorConfig config;
+    PrometheusMeterRegistry registry;
 
+    private final AtomicInteger requestsCounter = new AtomicInteger(0);
+
+    /** Timer to record the total of a request from {@link RequestData#getTotalTime()}. */
     private final Meter.MeterProvider<Timer> requestTimer;
+
+    /** Meter to record the response length of a request from {@link RequestData#getResponseLength()}. */
     private final Meter.MeterProvider<DistributionSummary> responseLengthSummary;
+
+    /**
+     * Timer to record the processing time of a request summing the values from
+     * {@link RequestData#getResourcesProcessingTime()}.
+     */
     private final Meter.MeterProvider<Timer> requestProcessingTimer;
+
+    /** Timer to record the labeling time of a request from {@link RequestData#getLabellingProcessingTime()}. */
     private final Meter.MeterProvider<Timer> requestLabellingProcessingTimer;
+
+    /**
+     * Meter to record the remote address of the host that makes the request from {@link RequestData#getRemoteAddr()}.
+     */
     private final Meter.MeterProvider<Counter> hostCounter;
 
-    public MicrometerAudit(MonitorConfig config, PrometheusMeterRegistry registry) {
+    public MicrometerMetricRequestListener(MonitorConfig config, PrometheusMeterRegistry registry) {
         this.config = config;
         this.registry = registry;
 
-        requestTimer = Timer.builder("requests").withRegistry(registry);
+        requestTimer = Timer.builder("requests.total").withRegistry(registry);
         requestProcessingTimer = Timer.builder("requests.processing").withRegistry(registry);
         requestLabellingProcessingTimer =
                 Timer.builder("requests.labelling.processing").withRegistry(registry);
@@ -47,16 +64,16 @@ public class MicrometerAudit implements RequestDataListener {
 
     @Override
     public void requestPostProcessed(RequestData rd) {
-        boolean enabled = getProperty("enabled", Boolean.class, false);
-
-        if (!enabled) {
-            return;
-        }
-
         try {
+            if (!isMetricRequestEnabled()) {
+                return;
+            }
+
             if (rd == null) {
                 return;
             }
+
+            resetMetricIfNeeded();
 
             Tags tags = composeTags(rd);
 
@@ -76,39 +93,50 @@ public class MicrometerAudit implements RequestDataListener {
                 requestLabellingProcessingTimer.withTags(tags).record(labellingProcessingTime, TimeUnit.MILLISECONDS);
             }
 
-            boolean trackHosts = getProperty("metric.host.enabled", Boolean.class, false);
-            if (trackHosts) {
-
+            if (isHostTrackingEnabled()) {
                 Tags hostMetricTags = tags.and(HostMetricTag.computeMicrometerTags(rd));
-
                 hostCounter.withTags(hostMetricTags).increment();
             }
 
             random(tags);
 
-        } catch (Throwable t) {
-            t.printStackTrace();
+        } catch (Exception e) {
+            throw new RuntimeException(
+                    "Unexpected error occurred while trying to record the request into a Micrometer metric", e);
         }
     }
 
-    private Tags composeTags(RequestData rd) {
+    private void resetMetricIfNeeded() {
+        Integer resetCount = getProperty("metric.reset_count", Integer.class, 1000);
+        if (requestsCounter.incrementAndGet() > resetCount) {
+            if (LOGGER.isLoggable(Level.FINE)) {
+                LOGGER.log(Level.FINE, "reset count reached ({0}). Resetting metrics", resetCount);
+            }
+            requestsCounter.set(0);
+            registry.forEachMeter(registry::remove);
+        }
+    }
 
-        log(rd);
+    private boolean isMetricRequestEnabled() {
+        return getProperty("enabled", Boolean.class, false);
+    }
 
-        Tags tags = RequestTag.computeMicrometerTags(rd);
-
-        System.err.println(tags);
-
-        return tags;
+    private boolean isHostTrackingEnabled() {
+        return getProperty("metric.host.enabled", Boolean.class, false);
     }
 
     <T> T getProperty(String name, Class<T> target, T defaultValue) {
-        T value = config.getProperty(PROMETHEUS, name, target);
+        T value = config.getProperty(MICROMETER, name, target);
         if (value == null) {
             return defaultValue;
         } else {
             return value;
         }
+    }
+
+    private Tags composeTags(RequestData rd) {
+        log(rd);
+        return RequestTag.computeMicrometerTags(rd);
     }
 
     private void random(Tags tags) {
@@ -124,7 +152,7 @@ public class MicrometerAudit implements RequestDataListener {
         }
     }
 
-    private static void log(RequestData rd) {
+    private void log(RequestData rd) {
         String service = Objects.requireNonNullElse(rd.getService(), "None");
         String operation = Objects.requireNonNullElse(rd.getOperation(), "None");
         String responseStatus = Objects.requireNonNullElse(String.valueOf(rd.getResponseStatus()), "");
