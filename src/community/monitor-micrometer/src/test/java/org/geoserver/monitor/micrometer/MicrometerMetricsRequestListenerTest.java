@@ -1,3 +1,11 @@
+/* (c) 2025 Open Source Geospatial Foundation - all rights reserved
+ * This code is licensed under the GPL 2.0 license, available at the root
+ * application directory.
+ *
+ * Micrometer is licensed under the Apache License, Version 2.0.
+ * See https://github.com/micrometer-metrics/micrometer/blob/main/LICENSE for details.
+ */
+
 package org.geoserver.monitor.micrometer;
 
 import static org.junit.Assert.assertEquals;
