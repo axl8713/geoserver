@@ -963,16 +963,28 @@ public class ResourceConfigurationPageTest extends GeoServerWicketTestSupport {
         tester.assertInvisible(attributesPanel + "attributesTable");
         tester.assertVisible(attributesPanel + "attributesEditor");
 
-        // customize one attribute, just rename it
-        String firstItemProperties =
-                "tabs:panel:theList:1:content:attributePanel:attributesEditor:table:listContainer:items:1:itemProperties";
-        form.setValue(firstItemProperties + ":2:component:text", "abstract");
+        // customize one attribute renaming it
+        String firstItemProperties = attributesPanel + "attributesEditor:table:listContainer:items:1:itemProperties";
 
-        // now move it down
-        // - simulate blur happening only in the browser as the editor loses focus)
-        // - simulate click on the down link
-        tester.executeAjaxEvent("publishedinfo:" + firstItemProperties + ":2:component:text", "blur");
-        tester.executeAjaxEvent("publishedinfo:" + firstItemProperties + ":1:component:down:link", "click");
+        // open the attribute edit modal
+        tester.executeAjaxEvent(firstItemProperties + ":6:component:link", "click");
+
+        tester.assertVisible(attributesPanel + "attributesEditor:dialog:dialog:modal:overlay:dialog");
+
+        // rename the attribute
+        form.setValue(
+                "tabs:panel:theList:1:content:attributePanel:attributesEditor:dialog:dialog:modal:overlay:dialog:content:content:form:userPanel:attributeForm:name",
+                "abstract");
+
+        // click on dialog submit button
+        tester.executeAjaxEvent(
+                attributesPanel + "attributesEditor:dialog:dialog:modal:overlay:dialog:content:content:form:submit",
+                "click");
+
+        tester.assertInvisible(attributesPanel + "attributesEditor:dialog:dialog:modal:overlay:dialog");
+
+        // move attribute down clicking on the down link
+        tester.executeAjaxEvent(firstItemProperties + ":1:component:down:link", "click");
 
         // save
         form.submit("apply");
