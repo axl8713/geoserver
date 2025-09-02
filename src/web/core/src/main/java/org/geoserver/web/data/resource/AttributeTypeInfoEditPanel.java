@@ -108,20 +108,7 @@ public class AttributeTypeInfoEditPanel extends Panel {
         TextField<String> nameTextField = new TextField<>("name", new PropertyModel<>(model, "name"));
         nameTextField.setRequired(true);
 
-        typeTextField = new ClassTextField(new PropertyModel<>(model, "binding"));
-        typeTextField.add(new AjaxFormComponentUpdatingBehavior("change") {
-            @Override
-            protected void onUpdate(AjaxRequestTarget target) {
-                target.add(restrictionsContainer);
-                target.add(restrictionTypeDropDownChoice);
-                restrictionTypeDropDownChoice.setModel(Model.of(RESTRICTION_TYPE.NONE));
-                optionsListMultipleChoice.setChoices(new ArrayList<>());
-                rangeMinTextField.setType(object.getBinding());
-                rangeMaxTextField.setType(object.getBinding());
-                target.appendJavaScript(adjustModalHeightScript());
-            }
-        });
-        typeTextField.setOutputMarkupId(true);
+        initTypeTextField();
 
         TextArea<String> sourceTextArea = new TextArea<>("source", new PropertyModel<>(model, "source"));
 
@@ -137,6 +124,24 @@ public class AttributeTypeInfoEditPanel extends Panel {
         CheckBox nillableCheckBox = new CheckBox("nillable", new PropertyModel<>(model, "nillable"));
 
         form.add(nameTextField, typeTextField, sourceTextArea, descriptionTextArea, nillableCheckBox);
+    }
+
+    private void initTypeTextField() {
+        typeTextField = new ClassTextField(Model.of(object.getBinding()));
+        typeTextField.setType(Class.class);
+        typeTextField.add(new AjaxFormComponentUpdatingBehavior("change") {
+            @Override
+            protected void onUpdate(AjaxRequestTarget target) {
+                restrictionTypeDropDownChoice.setModel(Model.of(RESTRICTION_TYPE.NONE));
+                optionsListMultipleChoice.setChoices(new ArrayList<>());
+                Class<?> convertedInput = typeTextField.getModelObject();
+                rangeMinTextField.setType(convertedInput);
+                rangeMaxTextField.setType(convertedInput);
+                target.add(restrictionsContainer);
+                target.add(restrictionTypeDropDownChoice);
+                target.appendJavaScript(adjustModalHeightScript());
+            }
+        });
     }
 
     private void initRestrictionsContainer() {
@@ -162,13 +167,7 @@ public class AttributeTypeInfoEditPanel extends Panel {
     }
 
     private boolean shouldRestrictionBeVisible() {
-
-        Class<?> binding = object.getBinding();
-        Class<?> typeField = typeTextField.getConvertedInput();
-
-        Class type = binding != null ? binding : typeField;
-
-        return (type != null && (type == String.class || Number.class.isAssignableFrom(type)));
+        return typeTextField.getModelObject() != null && (isAttributeTypeString() || isAttributeTypeNumber());
     }
 
     private void initRestrictionTypeDropDownChoice() {
@@ -225,21 +224,12 @@ public class AttributeTypeInfoEditPanel extends Panel {
     }
 
     private boolean isAttributeTypeNumber() {
-
-        Class<?> binding = object.getBinding();
-        Class<?> typeField = typeTextField.getConvertedInput();
-
-        Class type = binding != null ? binding : typeField;
-
+        Class<?> type = typeTextField.getModelObject();
         return Number.class.isAssignableFrom(type) || Number.class.isAssignableFrom(type);
     }
 
     private boolean isAttributeTypeString() {
-
-        Class<?> binding = object.getBinding();
-        Class<?> typeField = typeTextField.getConvertedInput();
-
-        return String.class == binding || String.class == typeField;
+        return String.class == typeTextField.getModelObject();
     }
 
     private String adjustModalHeightScript() {
@@ -420,6 +410,11 @@ public class AttributeTypeInfoEditPanel extends Panel {
     }
 
     public void finalizeAttributeValues() {
+
+        if (ifBindingHasBeenChanged()) {
+            object.setBinding(typeTextField.getModelObject());
+        }
+
         switch (restrictionTypeDropDownChoice.getModelObject()) {
             case NONE:
                 object.setOptions(null);
@@ -436,6 +431,10 @@ public class AttributeTypeInfoEditPanel extends Panel {
                 object.setOptions((List<Object>) optionsListMultipleChoice.getChoices());
                 break;
         }
+    }
+
+    private boolean ifBindingHasBeenChanged() {
+        return object.getBinding() != typeTextField.getModelObject();
     }
 
     private boolean rangeHasBeenChanged() {
