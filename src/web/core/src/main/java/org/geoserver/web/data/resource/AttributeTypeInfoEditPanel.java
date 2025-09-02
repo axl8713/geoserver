@@ -352,10 +352,12 @@ public class AttributeTypeInfoEditPanel extends Panel {
         }
 
         rangeMinTextField = new NumberTextField<>("rangeMin", new Model(minValue), (Class) object.getBinding());
+        rangeMinTextField.setRequired(true);
         rangeMinTextField.setOutputMarkupId(true);
         rangeMinTextField.setLabel(new StringResourceModel("AttributeTypeInfoEditPanel.minInclusive"));
 
         rangeMaxTextField = new NumberTextField<>("rangeMax", new Model(maxValue), (Class) object.getBinding());
+        rangeMaxTextField.setRequired(true);
         rangeMaxTextField.setOutputMarkupId(true);
         rangeMaxTextField.setLabel(new StringResourceModel("AttributeTypeInfoEditPanel.maxInclusive"));
     }
