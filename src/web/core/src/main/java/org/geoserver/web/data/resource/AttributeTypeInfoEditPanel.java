@@ -9,7 +9,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Objects;
 import org.apache.wicket.Component;
 import org.apache.wicket.ajax.AjaxRequestTarget;
 import org.apache.wicket.ajax.form.AjaxFormComponentUpdatingBehavior;
@@ -352,12 +351,10 @@ public class AttributeTypeInfoEditPanel extends Panel {
         }
 
         rangeMinTextField = new NumberTextField<>("rangeMin", new Model(minValue), (Class) object.getBinding());
-        rangeMinTextField.setRequired(true);
         rangeMinTextField.setOutputMarkupId(true);
         rangeMinTextField.setLabel(new StringResourceModel("AttributeTypeInfoEditPanel.minInclusive"));
 
         rangeMaxTextField = new NumberTextField<>("rangeMax", new Model(maxValue), (Class) object.getBinding());
-        rangeMaxTextField.setRequired(true);
         rangeMaxTextField.setOutputMarkupId(true);
         rangeMaxTextField.setLabel(new StringResourceModel("AttributeTypeInfoEditPanel.maxInclusive"));
     }
@@ -424,9 +421,7 @@ public class AttributeTypeInfoEditPanel extends Panel {
                 break;
             case RANGE:
                 object.setOptions(null);
-                if (rangeHasBeenChanged()) {
-                    object.setRange(createRangeFromRangeFields(object.getBinding()));
-                }
+                object.setRange(createRangeFromRangeFields());
                 break;
             case OPTIONS:
                 object.setRange(null);
@@ -439,38 +434,32 @@ public class AttributeTypeInfoEditPanel extends Panel {
         return object.getBinding() != typeTextField.getModelObject();
     }
 
-    private boolean rangeHasBeenChanged() {
-        NumberRange<? extends Number> range = object.getRange();
-        return range == null
-                || !Objects.equals(range.getMinValue(), rangeMinTextField.getInput())
-                || !Objects.equals(range.getMaxValue(), rangeMaxTextField.getInput());
-    }
-
     /**
      * Since object range is not tied with the range fields models, this method creates a new {@link NumberRange} typed
-     * as per the object binding.
-     *
-     * @param binding the binding of the object to get the range typed to
+     * as per the specified {@link #typeTextField}' model.
      */
-    private NumberRange<? extends Number> createRangeFromRangeFields(Class<?> binding) {
+    private NumberRange<? extends Number> createRangeFromRangeFields() {
+        Class<?> type = (Class<?>) typeTextField.getModelObject();
 
         Number min = rangeMinTextField.getConvertedInput();
         Number max = rangeMaxTextField.getConvertedInput();
 
-        if (binding.equals(Byte.class)) {
-            return NumberRange.create((Byte) min, (Byte) max);
-        } else if (binding.equals(Short.class)) {
-            return NumberRange.create((Short) min, (Short) max);
-        } else if (binding.equals(Integer.class)) {
-            return NumberRange.create((Integer) min, (Integer) max);
-        } else if (binding.equals(Long.class)) {
-            return NumberRange.create((Long) min, (Long) max);
-        } else if (binding.equals(Float.class)) {
-            return NumberRange.create((Float) min, (Float) max);
-        } else if (binding.equals(Double.class)) {
-            return NumberRange.create((Double) min, (Double) max);
-        } else {
-            throw new IllegalArgumentException("Unsupported range type: " + binding);
+        if (Byte.class.equals(type)) {
+            byte byteMin = (min != null) ? min.byteValue() : Byte.MIN_VALUE;
+            byte byteMax = (max != null) ? max.byteValue() : Byte.MAX_VALUE;
+            return NumberRange.create(byteMin, byteMax);
         }
+
+        if (Short.class.equals(type)) {
+            short shortMin = (min != null) ? min.shortValue() : Short.MIN_VALUE;
+            short shortMax = (max != null) ? max.shortValue() : Short.MAX_VALUE;
+            return NumberRange.create(shortMin, shortMax);
+        }
+
+        double doubleMin = min != null ? min.doubleValue() : Double.NEGATIVE_INFINITY;
+        double doubleMax = max != null ? max.doubleValue() : Double.POSITIVE_INFINITY;
+
+        NumberRange<Double> range = NumberRange.create(doubleMin, doubleMax);
+        return range.castTo((Class) type);
     }
 }
