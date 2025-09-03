@@ -6,6 +6,7 @@
 package org.geoserver.wfs.v2_0;
 
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
+import static org.custommonkey.xmlunit.XMLAssert.assertXpathExists;
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathNotExists;
 import static org.geoserver.data.test.CiteTestData.LAKES;
 import static org.geoserver.data.test.CiteTestData.PRIMITIVEGEOFEATURE;
@@ -21,6 +22,8 @@ import java.io.Serializable;
 import java.net.URLEncoder;
 import java.sql.Connection;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorCompletionService;
@@ -46,6 +49,7 @@ import org.geotools.api.data.SimpleFeatureStore;
 import org.geotools.api.data.Transaction;
 import org.geotools.gml3.v3_2.GML;
 import org.geotools.jdbc.JDBCDataStore;
+import org.geotools.util.NumberRange;
 import org.geotools.util.SimpleInternationalString;
 import org.geotools.wfs.v2_0.WFS;
 import org.hamcrest.CoreMatchers;
@@ -224,7 +228,7 @@ public class DescribeFeatureTypeTest extends WFS20TestSupport {
 
     void assertSchema(Document doc, QName... types) throws Exception {
         assertEquals("xsd:schema", doc.getDocumentElement().getNodeName());
-        XMLAssert.assertXpathExists("//xsd:import[@namespace='" + GML.NAMESPACE + "']", doc);
+        assertXpathExists("//xsd:import[@namespace='" + GML.NAMESPACE + "']", doc);
 
         for (QName type : types) {
             String eName = type.getLocalPart();
@@ -450,8 +454,8 @@ public class DescribeFeatureTypeTest extends WFS20TestSupport {
                 + "&typename="
                 + getLayerId(PRIMITIVEGEOFEATURE));
         assertSchema(dom, PRIMITIVEGEOFEATURE);
-        XMLAssert.assertXpathExists("//xsd:element[@name = 'name']", dom);
-        XMLAssert.assertXpathExists("//xsd:element[@name = 'description']", dom);
+        assertXpathExists("//xsd:element[@name = 'name']", dom);
+        assertXpathExists("//xsd:element[@name = 'description']", dom);
     }
 
     @Test
@@ -527,12 +531,78 @@ public class DescribeFeatureTypeTest extends WFS20TestSupport {
 
         // check DFT
         String path = "ows?service=WFS&version=2.0.0&request=DescribeFeatureType&typeName=" + layerId;
+
+        String asString = getAsString(path);
+        System.out.println(asString);
+
         Document doc = getAsDOM(path);
         assertXpathEvaluatesTo("xsd:string", "//xsd:element[@name='abstract']/@type", doc);
         assertXpathNotExists("//xsd:element[@name='surfaceProperty']", doc);
         assertXpathEvaluatesTo("xsd:string", "//xsd:element[@name='new']/@type", doc);
         assertXpathEvaluatesTo(
                 "attribute description", "//xsd:element[@name='abstract']/xsd:annotation/xsd:documentation", doc);
+    }
+
+    @Test
+    public void testFeatureTypeWithRangeAttributeRestriction() throws Exception {
+        // customize feature type
+        String layerId = getLayerId(PRIMITIVEGEOFEATURE);
+        FeatureTypeInfo fti = getCatalog().getFeatureTypeByName(layerId);
+        // dynamically compute attributes
+        List<AttributeTypeInfo> attributes = fti.attributes();
+
+        // add restriction and set them statically
+        attributes.get(0).setName("ranged");
+        attributes.get(0).setSource("description");
+        attributes.get(0).setBinding(Double.class);
+        attributes.get(0).setRange(new NumberRange<>(Double.class, Math.E, Math.PI));
+
+        fti.getAttributes().addAll(attributes);
+        getCatalog().save(fti);
+
+        // check DFT
+        String path = "ows?service=WFS&version=2.0.0&request=DescribeFeatureType&typeName=" + layerId;
+
+        String asString = getAsString(path);
+        System.out.println(asString);
+
+        Document doc = getAsDOM(path);
+        assertXpathNotExists("//xsd:element[@name='ranged']/@type", doc);
+        assertXpathExists("//xsd:element[@name='ranged']/xsd:simpleType/xsd:restriction", doc);
+        assertXpathEvaluatesTo("xsd:double", "//xsd:element[@name='ranged']//xsd:restriction/@base", doc);
+        assertXpathEvaluatesTo(String.valueOf(Math.E), "//xsd:element[@name='ranged']//xsd:minInclusive/@value", doc);
+        assertXpathEvaluatesTo(String.valueOf(Math.PI), "//xsd:element[@name='ranged']//xsd:maxInclusive/@value", doc);
+    }
+
+    @Test
+    public void testFeatureTypeWithOptionsAttributeRestriction() throws Exception {
+        // customize feature type
+        String layerId = getLayerId(PRIMITIVEGEOFEATURE);
+        FeatureTypeInfo fti = getCatalog().getFeatureTypeByName(layerId);
+        // dynamically compute attributes
+        List<AttributeTypeInfo> attributes = fti.attributes();
+
+        // add restriction and set them statically
+        attributes.get(0).setName("optioned");
+        attributes.get(0).setSource("description");
+        attributes.get(0).setBinding(String.class);
+        attributes.get(0).setOptions(new ArrayList<>(Arrays.asList(1, "TWO", 3, "Five", "eight")));
+
+        fti.getAttributes().addAll(attributes);
+        getCatalog().save(fti);
+
+        // check DFT
+        String path = "ows?service=WFS&version=2.0.0&request=DescribeFeatureType&typeName=" + layerId;
+
+        Document doc = getAsDOM(path);
+        assertXpathNotExists("//xsd:element[@name='optioned']/@type", doc);
+        assertXpathExists("//xsd:element[@name='optioned']/xsd:simpleType/xsd:restriction", doc);
+        assertXpathEvaluatesTo("xsd:string", "//xsd:element[@name='optioned']//xsd:restriction/@base", doc);
+        assertXpathEvaluatesTo("1", "//xsd:element[@name='optioned']//xsd:enumeration[1]/@value", doc);
+        assertXpathEvaluatesTo("TWO", "//xsd:element[@name='optioned']//xsd:enumeration[2]/@value", doc);
+        assertXpathEvaluatesTo("3", "//xsd:element[@name='optioned']//xsd:enumeration[3]/@value", doc);
+        assertXpathEvaluatesTo("Five", "//xsd:element[@name='optioned']//xsd:enumeration[4]/@value", doc);
+        assertXpathEvaluatesTo("eight", "//xsd:element[@name='optioned']//xsd:enumeration[5]/@value", doc);
     }
 
     @Test
