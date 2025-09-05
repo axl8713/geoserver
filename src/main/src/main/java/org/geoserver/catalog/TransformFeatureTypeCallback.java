@@ -78,9 +78,10 @@ public class TransformFeatureTypeCallback {
             Expression source = ECQL.toExpression(ati.getSource());
             Class<?> binding = ati.getBinding();
             InternationalString descriptionInternational = createDescriptionInternationalString(ati);
-            List<Filter> restrictions = createRestrictions(ati, name);
+            boolean nillable = ati.isNillable();
+            List<Filter> restrictions = createRestrictions(ati);
 
-            return new Definition(name, source, binding, null, descriptionInternational, restrictions);
+            return new Definition(name, source, binding, null, descriptionInternational, nillable, restrictions);
         } catch (CQLException e) {
             throw new ServiceException("Failed to parse the attribute source definition to a valid OGC Expression", e);
         }
@@ -100,7 +101,7 @@ public class TransformFeatureTypeCallback {
         return descriptionInternational;
     }
 
-    private List<Filter> createRestrictions(AttributeTypeInfo ati, String name) {
+    private List<Filter> createRestrictions(AttributeTypeInfo ati) {
         List<Filter> restrictions = new ArrayList<>();
 
         NumberRange<? extends Number> range = ati.getRange();
