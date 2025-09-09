@@ -155,7 +155,8 @@ public class JSONDescribeFeatureTypeResponse extends WFSDescribeFeatureTypeOutpu
 
         for (Filter f : ad.getType().getRestrictions()) {
             Class<? extends Filter> filterClass = f.getClass();
-            boolean isExpressionNumeric = Number.class.isAssignableFrom(ad.getType().getBinding());
+            boolean isExpressionNumeric =
+                    Number.class.isAssignableFrom(ad.getType().getBinding());
 
             if (filterClass == IsBetweenImpl.class) {
                 String lowerBoundary = ((IsBetweenImpl) f).getLowerBoundary().toString();
