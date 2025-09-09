@@ -49,7 +49,7 @@ public class AttributeTypeInfoEditPanel extends Panel {
 
     private static final long serialVersionUID = -4226325094883373205L;
 
-    private enum RESTRICTION_TYPE {
+    enum RESTRICTION_TYPE {
         NONE,
         OPTIONS,
         RANGE
@@ -223,8 +223,7 @@ public class AttributeTypeInfoEditPanel extends Panel {
     }
 
     private boolean isAttributeTypeNumber() {
-        Class<?> type = typeTextField.getModelObject();
-        return Number.class.isAssignableFrom(type) || Number.class.isAssignableFrom(type);
+        return Number.class.isAssignableFrom(typeTextField.getModelObject());
     }
 
     private boolean isAttributeTypeString() {
