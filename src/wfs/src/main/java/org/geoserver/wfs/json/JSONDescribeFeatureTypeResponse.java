@@ -161,19 +161,26 @@ public class JSONDescribeFeatureTypeResponse extends WFSDescribeFeatureTypeOutpu
             if (filterClass == IsBetweenImpl.class) {
                 String lowerBoundary = ((IsBetweenImpl) f).getLowerBoundary().toString();
                 String upperBoundary = ((IsBetweenImpl) f).getUpperBoundary().toString();
-                jw.key("minInclusive").value(isExpressionNumeric ? Double.parseDouble(lowerBoundary) : lowerBoundary);
-                jw.key("maxInclusive").value(isExpressionNumeric ? Double.parseDouble(upperBoundary) : upperBoundary);
+                jw.key("minInclusive").value(renderExpression(isExpressionNumeric, lowerBoundary));
+                jw.key("maxInclusive").value(renderExpression(isExpressionNumeric, upperBoundary));
             } else if (filterClass == OrImpl.class) {
                 jw.key("enumeration");
                 jw.array();
                 for (Filter eq : ((OrImpl) f).getChildren()) {
                     String expression = ((IsEqualsToImpl) eq).getExpression2().toString();
-                    jw.value(isExpressionNumeric ? Double.parseDouble(expression) : expression);
+                    jw.value(renderExpression(isExpressionNumeric, expression));
                 }
                 jw.endArray();
             }
         }
         jw.endObject(); // end restriction object
+    }
+
+    private static Object renderExpression(boolean isExpressionNumeric, String expression) {
+        if (!isExpressionNumeric || expression.contains("Infinity") || expression.equals("NaN")) {
+            return expression;
+        }
+        return Double.parseDouble(expression);
     }
 
     @Override
