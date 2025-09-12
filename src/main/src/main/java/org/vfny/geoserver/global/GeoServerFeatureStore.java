@@ -24,6 +24,7 @@ import org.geotools.api.filter.identity.FeatureId;
 import org.geotools.data.DataUtilities;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.FeatureIterator;
+import org.geotools.util.Converters;
 
 /**
  * GeoServer wrapper for backend Geotools2 DataStore.
@@ -76,8 +77,12 @@ public class GeoServerFeatureStore extends GeoServerFeatureSource implements Sim
 
                 for (PropertyDescriptor propertyDescriptor : schema.getDescriptors()) {
                     Object value = feature.getAttribute(propertyDescriptor.getName());
+                    Class<?> binding = propertyDescriptor.getType().getBinding();
+
+                    Object convertedValue = Converters.convert(value, binding);
+
                     if (isValueViolatingRestrictions(
-                            value, propertyDescriptor.getType().getRestrictions())) {
+                            convertedValue, propertyDescriptor.getType().getRestrictions())) {
                         throw new IllegalArgumentException(String.format(
                                 "Restriction evaluation failed for attribute '%s' of feature '%s'",
                                 propertyDescriptor.getName(), feature.getID()));
@@ -172,7 +177,12 @@ public class GeoServerFeatureStore extends GeoServerFeatureSource implements Sim
 
         for (PropertyDescriptor propertyDescriptor : schema.getDescriptors()) {
             Object value = updates.get(propertyDescriptor.getName().toString());
-            if (isValueViolatingRestrictions(value, propertyDescriptor.getType().getRestrictions())) {
+            Class<?> binding = propertyDescriptor.getType().getBinding();
+
+            Object convertedValue = Converters.convert(value, binding);
+
+            if (isValueViolatingRestrictions(
+                    convertedValue, propertyDescriptor.getType().getRestrictions())) {
                 throw new IllegalArgumentException(String.format(
                         "Restriction evaluation failed updating value of attribute '%s'",
                         propertyDescriptor.getName()));

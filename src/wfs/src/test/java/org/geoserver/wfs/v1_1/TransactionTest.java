@@ -1026,7 +1026,6 @@ public class TransactionTest extends WFSTestSupport {
                 + "<wfs:Insert>"
                 + " <gs:bar gml:id='bar.1234'>"
                 + "    <gs:ranged>3.001</gs:ranged>"
-                + "    <gs:name>restrictedx</gs:name>"
                 + " </gs:bar>"
                 + "</wfs:Insert>"
                 + "</wfs:Transaction>";
