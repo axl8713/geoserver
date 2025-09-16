@@ -1001,18 +1001,10 @@ public class TransactionTest extends WFSTestSupport {
         TestFeatureStoreContext testFeatureStoreContext = createTestFeatureStoreContext();
         FeatureTypeInfo featureTypeInfo = testFeatureStoreContext.featureTypeInfo;
 
-        AttributeTypeInfo name = new AttributeTypeInfoImpl();
-        name.setName("name");
-        name.setBinding(String.class);
-
         AttributeTypeInfo restrictedAttribute = new AttributeTypeInfoImpl();
-        restrictedAttribute.setName("ranged");
-        restrictedAttribute.setBinding(Double.class);
-        restrictedAttribute.setSource("1.0");
+        restrictedAttribute.setName("radius");
         restrictedAttribute.setRange(NumberRange.create(Math.E, Math.PI));
 
-        /* need to also add 'name' otherwise type is read-only */
-        featureTypeInfo.getAttributes().add(name);
         featureTypeInfo.getAttributes().add(restrictedAttribute);
 
         getCatalog().add(featureTypeInfo);
@@ -1025,7 +1017,7 @@ public class TransactionTest extends WFSTestSupport {
                 + "'>"
                 + "<wfs:Insert>"
                 + " <gs:bar gml:id='bar.1234'>"
-                + "    <gs:ranged>3.001</gs:ranged>"
+                + "    <gs:radius>3.001</gs:radius>"
                 + " </gs:bar>"
                 + "</wfs:Insert>"
                 + "</wfs:Transaction>";
@@ -1035,7 +1027,7 @@ public class TransactionTest extends WFSTestSupport {
         XMLAssert.assertXpathExists("//ogc:FeatureId[@fid = 'bar.1']", dom);
         dom = getAsDOM("wfs?request=GetFeature&version=1.1.0&service=wfs&featureId=bar.1");
         XMLAssert.assertXpathExists("//gs:bar[@gml:id = 'bar.1']", dom);
-        /* TODO: modify test to check for the attribute value, since attribute has always source value */
+        XMLAssert.assertXpathEvaluatesTo("3.001", "//gs:radius", dom);
     }
 
     @Test
@@ -1044,18 +1036,10 @@ public class TransactionTest extends WFSTestSupport {
         TestFeatureStoreContext testFeatureStoreContext = createTestFeatureStoreContext();
         FeatureTypeInfo featureTypeInfo = testFeatureStoreContext.featureTypeInfo;
 
-        AttributeTypeInfo name = new AttributeTypeInfoImpl();
-        name.setName("name");
-        name.setBinding(String.class);
-
         AttributeTypeInfo restrictedAttribute = new AttributeTypeInfoImpl();
-        restrictedAttribute.setName("ranged");
-        restrictedAttribute.setSource("2.0");
-        restrictedAttribute.setBinding(Double.class);
+        restrictedAttribute.setName("radius");
         restrictedAttribute.setRange(NumberRange.create(Math.E, Math.PI));
 
-        /* need to also add 'name' otherwise type is read-only */
-        featureTypeInfo.getAttributes().add(name);
         featureTypeInfo.getAttributes().add(restrictedAttribute);
 
         getCatalog().add(featureTypeInfo);
@@ -1068,7 +1052,7 @@ public class TransactionTest extends WFSTestSupport {
                 + "'>"
                 + "<wfs:Insert>"
                 + " <gs:bar gml:id='bar.1234'>"
-                + "    <gs:ranged>1234</gs:ranged>"
+                + "    <gs:radius>1234</gs:radius>"
                 + " </gs:bar>"
                 + "</wfs:Insert>"
                 + "</wfs:Transaction>";
@@ -1079,7 +1063,7 @@ public class TransactionTest extends WFSTestSupport {
         assertEquals(1, exceptionElements.getLength());
         String exceptionText = exceptionElements.item(0).getTextContent();
         assertEquals(
-                "Insert error: Restriction evaluation failed for attribute 'ranged' of feature 'bar.1234'",
+                "Insert error: Restriction evaluation failed for attribute 'radius' of feature 'bar.1234'",
                 exceptionText);
     }
 
@@ -1249,6 +1233,7 @@ public class TransactionTest extends WFSTestSupport {
         featureTypeBuilder.setName("bar");
         featureTypeBuilder.add("name", String.class);
         featureTypeBuilder.add("geom", Point.class);
+        featureTypeBuilder.add("radius", Double.class);
 
         store.createSchema(featureTypeBuilder.buildFeatureType());
 
