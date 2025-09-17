@@ -285,6 +285,7 @@ public class AttributeTypeInfoEditPanel extends Panel {
 
     private void initNewOptionTextField() {
         newOptionTextField = new TextField<>("newOption", new Model<>());
+        newOptionTextField.setOutputMarkupPlaceholderTag(true);
         newOptionTextField.setOutputMarkupId(true);
     }
 
@@ -362,7 +363,11 @@ public class AttributeTypeInfoEditPanel extends Panel {
         return new IFormValidator() {
             @Override
             public FormComponent<?>[] getDependentFormComponents() {
-                return new FormComponent<?>[] {newOptionTextField};
+                if (restrictionTypeDropDownChoice.getModelObject() != RESTRICTION_TYPE.OPTIONS) {
+                    return new FormComponent<?>[] {};
+                } else {
+                    return new FormComponent<?>[] {newOptionTextField};
+                }
             }
 
             @Override
@@ -385,7 +390,11 @@ public class AttributeTypeInfoEditPanel extends Panel {
         return new IFormValidator() {
             @Override
             public FormComponent<?>[] getDependentFormComponents() {
-                return new FormComponent<?>[] {rangeMinTextField, rangeMaxTextField};
+                if (restrictionTypeDropDownChoice.getModelObject() != RESTRICTION_TYPE.RANGE) {
+                    return new FormComponent<?>[] {};
+                } else {
+                    return new FormComponent<?>[] {rangeMinTextField, rangeMaxTextField};
+                }
             }
 
             @Override
@@ -438,7 +447,7 @@ public class AttributeTypeInfoEditPanel extends Panel {
      * as per the specified {@link #typeTextField}' model.
      */
     private NumberRange<? extends Number> createRangeFromRangeFields() {
-        Class<?> type = (Class<?>) typeTextField.getModelObject();
+        Class<?> type = typeTextField.getModelObject();
 
         Number min = rangeMinTextField.getConvertedInput();
         Number max = rangeMaxTextField.getConvertedInput();
