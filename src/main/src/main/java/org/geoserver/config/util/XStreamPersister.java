@@ -268,6 +268,12 @@ public class XStreamPersister {
 
     Map<Class<?>, String> backwardBreifMap = new HashMap<>();
 
+    /**
+     * List containing classes that should be ignored by XStream. This is required because sometimes generic converter
+     * may be registered in XStream, which will be used instead of dedicated converter from GeoTools
+     */
+    List<Class<?>> backwardBriefIgnored = new ArrayList<>();
+
     private Level forceLevel = LOGGER.getLevel() == null ? Level.INFO : LOGGER.getLevel();
 
     /** Flag controlling whether the persister should perform encryption on password fields */
@@ -450,6 +456,8 @@ public class XStreamPersister {
         xs.registerLocalConverter(impl(LayerInfo.class), "styles", new ReferenceCollectionConverter(StyleInfo.class));
         xs.registerLocalConverter(impl(LayerInfo.class), "metadata", new MetadataMapConverter());
 
+        xs.registerLocalConverter(impl(WMSLayerInfo.class), "vendorParameters", new BreifMapConverter());
+
         // LayerGroupInfo
         xs.registerLocalConverter(impl(LayerGroupInfo.class), "workspace", new ReferenceConverter(WorkspaceInfo.class));
         xs.registerLocalConverter(impl(LayerGroupInfo.class), "rootLayer", new ReferenceConverter(LayerInfo.class));
@@ -550,6 +558,10 @@ public class XStreamPersister {
         forwardBreifMap.put(typeId, clazz);
         backwardBreifMap.put(clazz, typeId);
         xs.allowTypes(new Class[] {clazz});
+    }
+
+    public void addBackwardsBriefIgnored(Class<?> clazz) {
+        backwardBriefIgnored.add(clazz);
     }
 
     public XStream getXStream() {
@@ -789,7 +801,7 @@ public class XStreamPersister {
     //
 
     // simple object converters
-    /** Map converter which encodes a map more breifly than the standard map converter. */
+    /** Map converter which encodes a map more briefly than the standard map converter. */
     public class BreifMapConverter extends MapConverter {
 
         static final String ENCRYPTED_FIELDS_KEY = "org.geoserver.config.encryptedFields";
@@ -922,6 +934,9 @@ public class XStreamPersister {
         }
 
         protected String getComplexTypeId(Class<?> clazz) {
+            if (backwardBriefIgnored.contains(clazz)) {
+                return null;
+            }
             String typeId = backwardBreifMap.get(clazz);
             if (typeId == null) {
                 List<Class<?>> matches = new ArrayList<>();
